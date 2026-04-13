@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>九宮格集合法 - 終極動態邏輯版</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    body { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); font-family: 'Noto Sans TC', sans-serif; height: 100dvh; margin: 0; display: flex; flex-direction: column; overflow: hidden; }
+    #app-container { display: flex; flex-direction: column; height: 100%; width: 100%; max-width: 1280px; margin: 0 auto; background: white; box-shadow: 0 10px 30px rgba(234, 88, 12, 0.1); }
+    @media (min-width: 768px) { #app-container { flex-direction: row; height: 95vh; margin-top: 2.5vh; border-radius: 20px; overflow: hidden; } }
+    
+    #left-panel { flex: 1.3; padding: 20px; background-color: #fffaf0; border-right: 2px solid #ffedd5; overflow-y: auto; overflow-x: hidden; position: relative; scroll-behavior: smooth;}
+    #right-panel { flex: 1; padding: 20px; padding-bottom: 100px; overflow-y: auto; background-color: #ffffff; scroll-behavior: smooth; }
+    @media (max-width: 767px) { #left-panel { flex: 0 0 auto; max-height: 55vh; position: sticky; top: 0; z-index: 50; box-shadow: 0 4px 6px rgba(0,0,0,0.05);} }
+
+    .grid-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; width: 100%; max-width: 550px; margin: 15px auto; background: #ea580c; border: 4px solid #ea580c; border-radius: 12px; overflow: hidden; position: relative;}
+    
+    .cell { background: #fffaf0; height: 110px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding-top: 12px; padding-bottom: 6px; position: relative; transition: all 0.3s; }
+    .cell-header { font-size: 0.95rem; color: #9a3412; font-weight: bold; margin-bottom: 2px; text-align: center; line-height: 1.15;}
+    .cell-value { color: #1f2937; font-size: 2.5rem; font-weight: 900; z-index: 2; display: flex; align-items: center; justify-content: center; width: 100%; flex: 1; opacity: 0; transform: scale(0.5); transition: opacity 0.4s, transform 0.4s;}
+    .cell-value.revealed { opacity: 1; transform: scale(1); }
+    
+    .cell.total { background: #fed7aa; }
+    .cell.outer { background: #ffedd5; }
+    .cell.inner { background: #ffffff; }
+
+    @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+    .animate-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    .focus-blink { animation: pulseBorder 1.5s infinite; z-index: 10; transform: scale(1.02); border-radius: 8px; box-shadow: inset 0 0 0 4px #f97316; }
+    @keyframes pulseBorder { 0%, 100% { box-shadow: inset 0 0 0 4px rgba(249, 115, 22, 0.4); } 50% { box-shadow: inset 0 0 0 6px rgba(249, 115, 22, 1); } }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+    .math-overlay { position: absolute; background: #ea580c; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 20px; z-index: 20; transform: translate(-50%, -50%); box-shadow: 0 4px 6px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; pointer-events: none;}
+    .math-overlay.show { opacity: 1; }
+
+    .step-section { border: 2px solid #fdba74; border-radius: 12px; margin-bottom: 24px; background: #fff; overflow: hidden; transition: opacity 0.3s;}
+    .step-header { background: #fff7ed; padding: 12px 16px; font-size: 1.1rem; font-weight: bold; color: #ea580c; border-bottom: 2px solid #fdba74; }
+    .step-header-blue { background: #eff6ff; color: #2563eb; border-bottom: 2px solid #93c5fd; }
+    .step-section-blue { border: 2px solid #93c5fd; }
+
+    .input-row { display: flex; flex-direction: column; padding: 12px 16px; border-bottom: 1px solid #ffedd5; }
+    .input-row:last-child { border-bottom: none; }
+    .input-flex { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    
+    .calc-input { width: 80px; height: 44px; font-size: 20px; text-align: center; border: 2px solid #fed7aa; border-radius: 8px; outline: none; transition: all 0.2s; font-weight: bold; color: #ea580c; }
+    .calc-input:focus { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2); }
+    .calc-input.error { border-color: #ef4444; background: #fef2f2; animation: shake 0.4s; color: #dc2626; }
+    .calc-input:disabled { background: #f0fdf4; border-color: #22c55e; color: #15803d; }
+    
+    .btn-check { background: #f97316; color: white; border: none; padding: 0 16px; height: 44px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap;}
+    .btn-check:hover { background: #ea580c; }
+    .btn-check:disabled { background: #d1d5db; cursor: not-allowed; color: #9ca3af; }
+
+    .obs-group { border: 1px solid #fed7aa; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: white; width: 100%; max-width: 550px;}
+    .obs-title { font-size: 0.9rem; color: #c2410c; font-weight: bold; margin-bottom: 6px; text-align: center; }
+    .obs-btn { font-size: 0.85rem; padding: 6px; border-radius: 6px; border: 1px solid #fdba74; background: #fffaf0; color: #9a3412; cursor: pointer; transition: all 0.2s; flex: 1; text-align: center; font-weight: bold;}
+    .obs-btn:hover { background: #ffedd5; }
+    .obs-btn.active { background: #ea580c; color: white; border-color: #c2410c; }
+    
+    .view-purple { background-color: #e9d5ff !important; border: 4px solid #a855f7 !important; z-index: 5;} 
+    .view-green { background-color: #bbf7d0 !important; border: 4px solid #22c55e !important; z-index: 5;} 
+    .view-orange { background-color: #fed7aa !important; border: 4px solid #f97316 !important; z-index: 5;} 
+    .view-blue { background-color: #bfdbfe !important; border: 4px solid #3b82f6 !important; z-index: 5;} 
+    .highlight-yellow { background-color: #fde047 !important; border: 3px solid #eab308; z-index: 5;} 
+
+    .flow-1 { background-color: #3b82f6 !important; color: white !important; border: 3px solid #1d4ed8 !important;} 
+    .flow-2 { background-color: #93c5fd !important; color: #1e3a8a !important; border: 3px solid #3b82f6 !important;} 
+    .flow-3 { background-color: #bae6fd !important; color: #1e3a8a !important; border: 3px dashed #3b82f6 !important;} 
+    
+    .check-mark { color: #ea580c; font-weight: 900; font-size: 2.2rem; text-shadow: 0 0 4px white; position: absolute; bottom: 0px; right: 8px; z-index: 20;}
+    .outer-check { color: #16a34a; font-weight: 900; font-size: 4rem; text-shadow: 0 0 8px white; position: absolute; opacity: 0.85; z-index: 15;}
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+  <div id="left-panel">
+    <div class="flex flex-col items-center w-full mx-auto pb-[150px]">
+      
+      <div class="w-full max-w-[550px] mb-3">
+        <select id="problem-select" class="w-full p-3 border-2 border-orange-300 rounded-lg text-orange-900 font-bold focus:outline-none text-lg bg-white shadow-sm">
+          </select>
+        <button id="btn-reload" class="w-full mt-2 py-2 bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold rounded-lg border border-orange-300 transition shadow-sm text-sm">
+          🔄 重新產生本題數字
+        </button>
+      </div>
+      
+      <div class="w-full max-w-[550px] bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500 text-gray-800 mb-2 shadow-sm leading-relaxed">
+        <div id="problem-desc" class="text-base font-bold mb-2 pb-2 border-b border-orange-200"></div>
+        <div id="problem-subqs" class="text-sm text-gray-700 space-y-1 font-bold"></div>
+      </div>
+
+      <div class="grid-container" id="nine-grid">
+        <div class="cell total" id="cell-U" data-row="0" data-col="0"><div class="cell-header">全集(總數)<br><span class="text-xs font-normal">定錨點</span></div><div class="cell-value" id="val-U"></div></div>
+        <div class="cell outer" id="cell-A" data-row="0" data-col="1"><div class="cell-header label-A">A</div><div class="cell-value" id="val-A"></div><div id="check-A"></div></div>
+        <div class="cell outer" id="cell-A_prime" data-row="0" data-col="2"><div class="cell-header label-A-prime">A'</div><div class="cell-value" id="val-A_prime"></div><div id="check-A_prime"></div></div>
+        <div class="cell outer" id="cell-B" data-row="1" data-col="0"><div class="cell-header label-B">B</div><div class="cell-value" id="val-B"></div><div id="check-B"></div></div>
+        <div class="cell inner" id="cell-A_B" data-row="1" data-col="1"><div class="cell-value" id="val-A_B"></div></div>
+        <div class="cell inner" id="cell-A_prime_B" data-row="1" data-col="2"><div class="cell-value" id="val-A_prime_B"></div></div>
+        <div class="cell outer" id="cell-B_prime" data-row="2" data-col="0"><div class="cell-header label-B-prime">B'</div><div class="cell-value" id="val-B_prime"></div><div id="check-B_prime"></div></div>
+        <div class="cell inner" id="cell-A_B_prime" data-row="2" data-col="1"><div class="cell-value" id="val-A_B_prime"></div></div>
+        <div class="cell inner" id="cell-A_prime_B_prime" data-row="2" data-col="2"><div class="cell-value" id="val-A_prime_B_prime"></div></div>
+        
+        <div id="math-overlay-container"></div>
+      </div>
+
+      <div id="observation-panel" class="hidden flex-col gap-2 mt-2 w-full items-center">
+        <div class="text-center font-bold text-orange-600 border-b border-orange-200 pb-2 mb-2 w-full max-w-[550px] text-lg">🔍 九宮格進階觀察</div>
+        
+        <div class="obs-group">
+          <div class="obs-title text-purple-800">【四重視角】驗證總數 (點擊測試U的連動)</div>
+          <div class="flex gap-2">
+            <button class="obs-btn hover:bg-purple-100 text-purple-800 border-purple-300" onclick="obs('view', 1)">1. 總計(紫)</button>
+            <button class="obs-btn hover:bg-green-100 text-green-800 border-green-300" onclick="obs('view', 2)">2. A+A'(綠)</button>
+            <button class="obs-btn hover:bg-orange-100 text-orange-800 border-orange-300" onclick="obs('view', 3)">3. B+B'(橘)</button>
+            <button class="obs-btn hover:bg-blue-100 text-blue-800 border-blue-300" onclick="obs('view', 4)">4. 核心區(藍)</button>
+          </div>
+        </div>
+
+        <div class="obs-group">
+          <div class="obs-title text-blue-800">【視覺流向】條件符合數遞減</div>
+          <div class="flex gap-2">
+            <button class="obs-btn hover:bg-blue-100" onclick="obs('flow', 1)">完全符合(2)</button>
+            <button class="obs-btn hover:bg-blue-100" onclick="obs('flow', 2)">僅一符合(1)</button>
+            <button class="obs-btn hover:bg-blue-100" onclick="obs('flow', 3)">完全不符合(0)</button>
+          </div>
+        </div>
+
+        <div class="obs-group">
+          <div class="obs-title text-green-800">【聯集區域】還原排容原理打勾</div>
+          <div class="flex gap-2">
+            <button class="obs-btn hover:bg-green-100" onclick="obs('union', 1)">A∪B</button>
+            <button class="obs-btn hover:bg-green-100" onclick="obs('union', 2)">A∪B'</button>
+            <button class="obs-btn hover:bg-green-100" onclick="obs('union', 3)">A'∪B</button>
+            <button class="obs-btn hover:bg-green-100" onclick="obs('union', 4)">A'∪B'</button>
+          </div>
+        </div>
+        <button class="mt-2 w-full max-w-[550px] py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-bold transition shadow-sm" onclick="clearObs()">清除所有觀察效果</button>
+      </div>
+    </div> 
+  </div>
+
+  <div id="right-panel">
+    <div id="interactive-content">
+      <div class="text-gray-700 mb-6 font-bold text-xl border-l-4 border-orange-500 pl-3">🎯 戰略：逐步解出九宮格，再回答問題！</div>
+      
+      <div id="loading-indicator" class="text-center py-10 text-orange-600 font-bold text-lg hidden">
+        <svg class="animate-spin h-8 w-8 text-orange-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+        正在將已知條件慢慢放入表格中...
+      </div>
+
+      <div id="phase-1-container"></div>
+
+      <div id="phase-2-container" class="hidden">
+        <div class="step-section step-section-blue mb-6 shadow-lg mt-6">
+          <div class="step-header step-header-blue text-xl">Step 2：回答問題</div>
+          <div id="sub-questions-list"></div>
+        </div>
+        <div id="finish-msg" class="hidden bg-green-100 border-2 border-green-500 text-green-800 p-5 rounded-xl text-center font-bold text-xl mb-6 shadow-md">
+          🎉 恭喜！本題完全破解！<br><span class="text-base font-normal text-green-700 mt-2 inline-block">請到左方「觀察面板」，體驗視覺化解題邏輯。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 數學工具函數
+  const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const factorial = n => n <= 1 ? 1 : n * factorial(n - 1);
+  const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+  const lcm = (a, b) => (a * b) / gcd(a, b);
+
+  // ==========================================
+  // 動態題庫引擎 (四大題型)
+  // ==========================================
+  const PROBLEM_GENERATORS = [
+    {
+      id: 'p1', source: '【1-2排列】進階題 (全空/自行計算)',
+      generate: () => {
+        const n = rand(4, 6);
+        const U = factorial(n), A = factorial(n-1), B = factorial(n-1), A_B = factorial(n-2);
+        return {
+          text: `有 ${n} 個人排成一直線。其中甲不排在首位，乙不排在末位，請問共有幾種排法？`,
+          labels: { A: '甲排首', A_prime: '甲不排首', B: '乙排末', B_prime: '乙不排末' },
+          knowns: {}, // 完全空，讓學生自己算
+          preSteps: [
+            { target: 'U', val: U, label: `全集(任意排)`, hint: `直線排列：$${n}! = ${U}$` },
+            { target: 'A', val: A, label: `甲排首 (A)`, hint: `甲固定，其餘排列：$${n-1}! = ${A}$` },
+            { target: 'B', val: B, label: `乙排末 (B)`, hint: `乙固定，其餘排列：$${n-1}! = ${B}$` },
+            { target: 'A_B', val: A_B, label: `甲首且乙末`, hint: `甲乙皆固定，其餘排列：$${n-2}! = ${A_B}$` }
+          ],
+          subQs: [ { q: '所求：甲不排首「且」乙不排末的排法有幾種？', key: 'A_prime_B_prime' } ]
+        };
+      }
+    },
+    {
+      id: 'p2', source: '【2-1集合】倍數問題 (包含LCM除法)',
+      generate: () => {
+        const N = [100, 150, 200, 250, 300][rand(0,4)];
+        let d1 = [2, 3, 4][rand(0,2)];
+        let d2 = [3, 4, 5][rand(0,2)];
+        if (d1 === d2) d2++; 
+        
+        const d_lcm = lcm(d1, d2);
+        const A = Math.floor(N/d1), B = Math.floor(N/d2), A_B = Math.floor(N/d_lcm);
+        
+        return {
+          text: `從 1 到 ${N} 的自然數中，試求與 ${d1} 及 ${d2} 倍數相關的數量。`,
+          labels: { A: `${d1}的倍數`, A_prime: `非${d1}倍數`, B: `${d2}的倍數`, B_prime: `非${d2}倍數` },
+          knowns: { U: N }, // 只給總數
+          preSteps: [
+            { target: 'A', val: A, label: `${d1}的倍數 (A)`, hint: `使用除法取商數：$${N} \\div ${d1} = ${A}...$` },
+            { target: 'B', val: B, label: `${d2}的倍數 (B)`, hint: `使用除法取商數：$${N} \\div ${d2} = ${B}...$` },
+            { target: 'A_B', val: A_B, label: `同為兩者倍數`, hint: `找出兩數最小公倍數(${d_lcm})並除之：$${N} \\div ${d_lcm} = ${A_B}...$` }
+          ],
+          subQs: [
+            { q: `(1) 是 ${d1} 或 ${d2} 的倍數？`, calc: g => g.U - g.A_prime_B_prime },
+            { q: `(2) 是 ${d2} 但不是 ${d1} 的倍數？`, key: 'A_prime_B' },
+            { q: `(3) 不是 ${d1} 且不是 ${d2} 的倍數？`, key: 'A_prime_B_prime' }
+          ]
+        };
+      }
+    },
+    {
+      id: 'p4', source: '【2-1集合】標準正向題 (及格狀態)',
+      generate: () => {
+        const U = rand(30, 50);
+        const A = rand(15, U-5), B = rand(15, U-5);
+        const minAB = Math.max(0, A + B - U), maxAB = Math.min(A, B);
+        const A_B = rand(minAB, maxAB);
+        return {
+          text: `全班有 ${U} 位學生，某次考試國文及格的有 ${A} 位，英文及格的有 ${B} 位，兩科都及格的有 ${A_B} 位。`,
+          labels: { A: '國文及格', A_prime: '國文不及格', B: '英文及格', B_prime: '英文不及格' },
+          knowns: { U, A, B, A_B },
+          subQs: [
+            { q: '(1) 國文或英文及格的有幾位？', calc: g => g.U - g.A_prime_B_prime },
+            { q: '(2) 恰有一科及格的有幾位？', calc: g => g.A_B_prime + g.A_prime_B },
+            { q: '(3) 兩科都不及格的有幾位？', key: 'A_prime_B_prime' }
+          ]
+        };
+      }
+    },
+    {
+      id: 'p8', source: '【2-1集合】反推全班人數 (依邏輯順序)',
+      generate: () => {
+        const A = rand(20, 35), B = rand(20, 35);
+        const A_B = rand(10, Math.min(A,B)-2);
+        const A_p_B_p = rand(3, 12);
+        return {
+          text: `某考試中，數學及格 ${A} 位，英文及格 ${B} 位，兩科都及格 ${A_B} 位，<span class="text-orange-700 font-bold">兩科都不及格 ${A_p_B_p} 位</span>。`,
+          labels: { A: '數學及格', A_prime: '數學不及格', B: '英文及格', B_prime: '英文不及格' },
+          knowns: { A, B, A_B, A_prime_B_prime: A_p_B_p },
+          // 精確指定反推題的解題順序：僅B -> 僅A -> A' -> B' -> 全集(U)
+          customPath: [
+            { target: 'A_prime_B', val: B - A_B, label: '僅英文及格(僅B)', eq: `${B} - ${A_B}`, r: RULES.find(r=>r.total==='B') },
+            { target: 'A_B_prime', val: A - A_B, label: '僅數學及格(僅A)', eq: `${A} - ${A_B}`, r: RULES.find(r=>r.total==='A') },
+            { target: 'A_prime', val: (B - A_B) + A_p_B_p, label: '數學不及格(A\')', eq: `${B - A_B} + ${A_p_B_p}`, r: RULES.find(r=>r.total==='A_prime') },
+            { target: 'B_prime', val: (A - A_B) + A_p_B_p, label: '英文不及格(B\')', eq: `${A - A_B} + ${A_p_B_p}`, r: RULES.find(r=>r.total==='B_prime') },
+            { target: 'U', val: A + ((B - A_B) + A_p_B_p), label: '全集(U)', eq: `${A} + ${(B - A_B) + A_p_B_p}`, r: RULES.find(r=>r.total==='U') }
+          ],
+          subQs: [ { q: '請問全班共有幾人(U)？', key: 'U' } ]
+        };
+      }
+    }
+  ];
+
+  // 增加隨機綜合挑戰題 (動態呼叫前四種)
+  PROBLEM_GENERATORS.push({
+    id: 'random', source: '🎲 隨機洗牌挑戰題',
+    generate: () => {
+      const idx = [0, 1, 2, 3][rand(0, 3)];
+      let prob = PROBLEM_GENERATORS[idx].generate();
+      prob.text = `<span class="text-purple-700 font-bold">【🎲 隨機抽籤挑戰】</span><br>` + prob.text;
+      return prob;
+    }
+  });
+
+  const RULES = [
+    { total: 'U', p1: 'A', p2: 'A_prime', type: 'h', row: 0, cols: [0,1,2] },
+    { total: 'U', p1: 'B', p2: 'B_prime', type: 'v', col: 0, rows: [0,1,2] },
+    { total: 'B', p1: 'A_B', p2: 'A_prime_B', type: 'h', row: 1, cols: [0,1,2] },
+    { total: 'B_prime', p1: 'A_B_prime', p2: 'A_prime_B_prime', type: 'h', row: 2, cols: [0,1,2] },
+    { total: 'A', p1: 'A_B', p2: 'A_B_prime', type: 'v', col: 1, rows: [0,1,2] },
+    { total: 'A_prime', p1: 'A_prime_B', p2: 'A_prime_B_prime', type: 'v', col: 2, rows: [0,1,2] }
+  ];
+
+  const cellNames = { U:'全集(U)', A:'A', A_prime:"A'", B:'B', B_prime:"B'", A_B:'皆是', A_prime_B:'僅B', A_B_prime:'僅A', A_prime_B_prime:'皆非' };
+  
+  let currentProblem, currentGrid = {}, fullSolvePath = [];
+  let currentAnimSeq = 0; 
+
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  let audioContext;
+  function initAudio() { if (!audioContext) audioContext = new AudioCtx(); }
+  function playTone(freq, type, duration, vol=0.1) {
+    if(!audioContext) return;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+    gain.gain.setValueAtTime(vol, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+    osc.connect(gain); gain.connect(audioContext.destination);
+    osc.start(); osc.stop(audioContext.currentTime + duration);
+  }
+  function playPop() { initAudio(); playTone(600, 'triangle', 0.1, 0.05); }
+  function playSuccess() { initAudio(); playTone(880, 'sine', 0.1); setTimeout(() => playTone(1108.73, 'sine', 0.2), 100); }
+  function playError() { initAudio(); playTone(150, 'sawtooth', 0.3, 0.05); }
+
+  window.onload = () => {
+    const sel = document.getElementById('problem-select');
+    PROBLEM_GENERATORS.forEach((p, idx) => {
+      let opt = document.createElement('option');
+      opt.value = idx; opt.innerText = p.source;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => launchProblem());
+    document.getElementById('btn-reload').addEventListener('click', () => launchProblem());
+    launchProblem();
+  };
+
+  function generateSolvePath(initialGrid) {
+    let grid = { ...initialGrid };
+    let path = [];
+
+    // 處理需要手動計算的前置步驟
+    if (currentProblem.preSteps) {
+        currentProblem.preSteps.forEach(ps => {
+            path.push({ ...ps, isPreStep: true });
+            grid[ps.target] = ps.val;
+        });
+    }
+
+    // 若有自訂順序 (如反推題)
+    if (currentProblem.customPath) {
+        currentProblem.customPath.forEach(step => {
+            path.push(step);
+            grid[step.target] = step.val;
+        });
+        return { finalGrid: grid, path: path };
+    }
+
+    // 自動加減法推理引擎
+    let changed = true;
+    while (changed && Object.keys(grid).length < 9) {
+      changed = false;
+      let possibleSteps = [];
+      for (let r of RULES) {
+        let c_t = grid[r.total] !== undefined, c_p1 = grid[r.p1] !== undefined, c_p2 = grid[r.p2] !== undefined;
+        if (!c_t && c_p1 && c_p2) possibleSteps.push({ target: r.total, val: grid[r.p1] + grid[r.p2], eq: `${grid[r.p1]} + ${grid[r.p2]}`, r });
+        if (!c_p1 && c_t && c_p2) possibleSteps.push({ target: r.p1, val: grid[r.total] - grid[r.p2], eq: `${grid[r.total]} - ${grid[r.p2]}`, r });
+        if (!c_p2 && c_t && c_p1) possibleSteps.push({ target: r.p2, val: grid[r.total] - grid[r.p1], eq: `${grid[r.total]} - ${grid[r.p1]}`, r });
+      }
+      if (possibleSteps.length > 0) {
+        let best = possibleSteps[0]; 
+        grid[best.target] = best.val;
+        path.push(best);
+        changed = true;
+      }
+    }
+    return { finalGrid: grid, path };
+  }
+
+  async function launchProblem() {
+    currentAnimSeq++;
+    const seq = currentAnimSeq;
+    initAudio(); clearObs(); hideOverlays();
+    
+    document.getElementById('phase-1-container').innerHTML = '';
+    document.getElementById('phase-2-container').classList.add('hidden');
+    document.getElementById('observation-panel').classList.add('hidden');
+    document.getElementById('finish-msg').classList.add('hidden');
+    document.getElementById('phase-1-container').classList.remove('opacity-50', 'pointer-events-none');
+    document.getElementById('loading-indicator').classList.remove('hidden');
+
+    const selIdx = document.getElementById('problem-select').value;
+    const generator = PROBLEM_GENERATORS[selIdx];
+    currentProblem = generator.generate();
+    
+    document.getElementById('problem-desc').innerHTML = currentProblem.text;
+    document.getElementById('problem-subqs').innerHTML = currentProblem.subQs.map(q => `<div>📝 ${q.q}</div>`).join('');
+    
+    document.querySelectorAll('.label-A').forEach(el => el.innerText = currentProblem.labels.A + "(A)");
+    document.querySelectorAll('.label-A-prime').forEach(el => el.innerText = currentProblem.labels.A_prime + "(A')");
+    document.querySelectorAll('.label-B').forEach(el => el.innerText = currentProblem.labels.B + "(B)");
+    document.querySelectorAll('.label-B-prime').forEach(el => el.innerText = currentProblem.labels.B_prime + "(B')");
+
+    // 清空表格
+    const allKeys = ['U', 'A', 'A_prime', 'B', 'B_prime', 'A_B', 'A_prime_B', 'A_B_prime', 'A_prime_B_prime'];
+    allKeys.forEach(k => {
+      let v = document.getElementById(`val-${k}`);
+      v.innerText = '';
+      v.className = 'cell-value'; 
+      document.getElementById(`cell-${k}`).classList.remove('focus-blink');
+    });
+
+    currentGrid = { ...currentProblem.knowns };
+    let solved = generateSolvePath(currentGrid);
+    fullSolvePath = solved.path;
+    currentGrid = solved.finalGrid; 
+
+    // === 0.8秒動畫填入初始條件 ===
+    await sleep(400); 
+    const knownKeys = Object.keys(currentProblem.knowns);
+    for (let k of knownKeys) {
+      if (currentAnimSeq !== seq) return; 
+      let valEl = document.getElementById(`val-${k}`);
+      valEl.innerText = currentProblem.knowns[k];
+      valEl.classList.add('revealed');
+      document.getElementById(`cell-${k}`).classList.add('animate-pop');
+      playPop();
+      await sleep(800); 
+    }
+
+    if (currentAnimSeq !== seq) return;
+    document.getElementById('loading-indicator').classList.add('hidden');
+    renderPhase1();
+    if(window.MathJax) MathJax.typesetPromise();
+  }
+
+  function renderPhase1() {
+    let p1c = document.getElementById('phase-1-container');
+    let contentHTML = `<div class="step-section"><div class="step-header">Step 1：依據邏輯順序破解九宮格</div>`;
+    
+    fullSolvePath.forEach((step) => {
+      let title = step.isPreStep ? step.label : cellNames[step.target];
+      let hintText = step.isPreStep ? step.hint : `提示算式：$${step.eq}$`;
+      
+      contentHTML += `
+        <div class="input-row" id="row-${step.target}">
+          <div class="input-flex">
+            <div class="font-bold text-gray-800 flex-1">${title}</div>
+            <input type="number" id="in-${step.target}" class="calc-input p1-input" placeholder="?">
+            <button id="btn-${step.target}" class="btn-check p1-btn" onclick="checkGridStep('${step.target}', ${step.val}, ${step.isPreStep ? 'true' : 'false'})">檢查</button>
+            <button onclick="toggleHint('hint-${step.target}', '${step.target}', ${step.isPreStep ? 'true' : 'false'})" class="text-blue-600 text-sm font-bold hover:underline w-16 text-right">小提示</button>
+          </div>
+          <div id="hint-${step.target}" class="hidden mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
+             ${hintText}
+          </div>
+        </div>`;
+    });
+
+    contentHTML += `</div>`;
+    p1c.innerHTML = contentHTML;
+
+    setTimeout(() => {
+      document.querySelectorAll('.p1-input').forEach(inp => {
+        let key = inp.id.split('-')[1];
+        let cellEl = document.getElementById(`cell-${key}`);
+        let isPre = fullSolvePath.find(s => s.target === key).isPreStep;
+        inp.addEventListener('focus', () => cellEl.classList.add('focus-blink'));
+        inp.addEventListener('blur', () => cellEl.classList.remove('focus-blink'));
+        inp.addEventListener('keypress', (e) => { 
+            if(e.key === 'Enter') {
+                let correctVal = currentGrid[key];
+                checkGridStep(key, correctVal, isPre);
+            }
+        });
+      });
+      let firstInp = document.querySelector('.p1-input');
+      if(firstInp) firstInp.focus();
+      if(window.MathJax) MathJax.typesetPromise();
+    }, 100);
+  }
+
+  function checkGridStep(key, correctVal, isPreStep) {
+    let inp = document.getElementById(`in-${key}`);
+    let btn = document.getElementById(`btn-${key}`);
+    let cellEl = document.getElementById(`cell-${key}`);
+    let valEl = document.getElementById(`val-${key}`);
+    let val = parseInt(inp.value);
+    if(isNaN(val)) return;
+
+    if(val === correctVal) {
+      playSuccess();
+      inp.disabled = true; inp.classList.remove('error');
+      btn.innerText = '✓'; btn.disabled = true; btn.classList.replace('bg-f97316', 'bg-green-500');
+      document.getElementById(`hint-${key}`).classList.add('hidden');
+      hideOverlays();
+      
+      valEl.innerText = val;
+      valEl.classList.add('revealed');
+      cellEl.classList.remove('focus-blink'); 
+      cellEl.classList.add('animate-pop');
+
+      setTimeout(() => {
+        let nextInp = document.querySelector('.p1-input:not(:disabled)');
+        if(nextInp) nextInp.focus();
+        else triggerPhase2();
+      }, 300);
+    } else {
+      playError();
+      inp.classList.remove('error'); void inp.offsetWidth; inp.classList.add('error');
+      document.getElementById(`hint-${key}`).classList.remove('hidden');
+      if (!isPreStep) {
+          let stepDef = fullSolvePath.find(s => s.target === key);
+          if(stepDef && stepDef.r) showRuleOverlay(stepDef.r);
+      }
+      setTimeout(() => inp.focus(), 50);
+    }
+  }
+
+  function triggerPhase2() {
+    document.getElementById('phase-1-container').classList.add('opacity-50', 'pointer-events-none');
+    let p2c = document.getElementById('phase-2-container');
+    p2c.classList.remove('hidden');
+    
+    let listHTML = '';
+    currentProblem.subQs.forEach((q, idx) => {
+      let ans = q.key ? currentGrid[q.key] : q.calc(currentGrid);
+      listHTML += `
+        <div class="input-row">
+          <div class="input-flex">
+            <div class="font-bold text-blue-900 flex-1">${q.q}</div>
+            <input type="number" id="sq-in-${idx}" class="calc-input sq-input border-blue-300 text-blue-700 focus:border-blue-500" placeholder="?">
+            <button id="sq-btn-${idx}" class="btn-check bg-blue-600 hover:bg-blue-700" onclick="checkSubQ(${idx}, ${ans})">檢查</button>
+          </div>
+        </div>`;
+    });
+    document.getElementById('sub-questions-list').innerHTML = listHTML;
+    
+    setTimeout(() => {
+      document.querySelectorAll('.sq-input').forEach((inp, idx) => {
+        inp.addEventListener('keypress', (e) => { 
+          if(e.key === 'Enter') { document.getElementById(`sq-btn-${idx}`).click(); }
+        });
+      });
+      let firstSq = document.querySelector('.sq-input');
+      if(firstSq) { firstSq.focus(); firstSq.scrollIntoView({behavior:'smooth', block:'center'}); }
+    }, 100);
+  }
+
+  function checkSubQ(idx, correctVal) {
+    let inp = document.getElementById(`sq-in-${idx}`);
+    let btn = document.getElementById(`sq-btn-${idx}`);
+    let val = parseInt(inp.value);
+    if(isNaN(val)) return;
+
+    if(val === correctVal) {
+      playSuccess();
+      inp.disabled = true; inp.classList.remove('error');
+      btn.innerText = '✓'; btn.disabled = true; btn.classList.replace('bg-blue-600', 'bg-green-500');
+      
+      setTimeout(() => {
+        let nextInp = document.querySelector('.sq-input:not(:disabled)');
+        if(nextInp) nextInp.focus();
+        else {
+          document.getElementById('finish-msg').classList.remove('hidden');
+          document.getElementById('observation-panel').classList.remove('hidden');
+          document.getElementById('observation-panel').classList.add('flex');
+          document.getElementById('left-panel').scrollTo({ top: document.getElementById('left-panel').scrollHeight, behavior: 'smooth' });
+        }
+      }, 300);
+    } else {
+      playError();
+      inp.classList.remove('error'); void inp.offsetWidth; inp.classList.add('error');
+      setTimeout(() => inp.focus(), 50);
+    }
+  }
+
+  function toggleHint(hintId, key, isPreStep) {
+    initAudio(); let el = document.getElementById(hintId);
+    if (el.classList.contains('hidden')) {
+      el.classList.remove('hidden');
+      if (!isPreStep) {
+          let stepDef = fullSolvePath.find(s => s.target === key);
+          if(stepDef && stepDef.r) showRuleOverlay(stepDef.r);
+      }
+    } else { el.classList.add('hidden'); hideOverlays(); }
+  }
+
+  function hideOverlays() { document.getElementById('math-overlay-container').innerHTML = ''; }
+  function showRuleOverlay(rule) {
+    hideOverlays(); let isH = rule.type === 'h';
+    let topEq, leftEq, topPlus, leftPlus;
+    if (isH) {
+      let rY = (rule.row === 0) ? '16.66%' : (rule.row === 1) ? '50%' : '83.33%';
+      topEq = topPlus = rY; leftEq = '33.33%'; leftPlus = '66.66%';
+    } else {
+      let cX = (rule.col === 0) ? '16.66%' : (rule.col === 1) ? '50%' : '83.33%';
+      leftEq = leftPlus = cX; topEq = '33.33%'; topPlus = '66.66%';
+    }
+    let eqTransform = !isH ? 'transform: translate(calc(-50% - 3px), -50%) rotate(90deg);' : '';
+    document.getElementById('math-overlay-container').innerHTML = `
+      <div class="math-overlay show" style="top:${topEq}; left:${leftEq}; ${eqTransform}">=</div>
+      <div class="math-overlay show" style="top:${topPlus}; left:${leftPlus};">+</div>`;
+  }
+
+  // ==========================================
+  // 進階觀察區 (紫、綠、橘、藍 顏色連動)
+  // ==========================================
+  function clearObs() {
+    document.querySelectorAll('.cell').forEach(c => {
+      c.className = c.className.replace(/view-purple|view-green|view-orange|view-blue|highlight-yellow/g, '').replace(/flow-\d/g, '');
+    });
+    document.querySelectorAll('.check-mark, .outer-check').forEach(e => e.remove());
+    document.querySelectorAll('.obs-btn').forEach(b => b.classList.remove('active'));
+  }
+
+  window.obs = function(type, val) {
+    clearObs(); event.target.classList.add('active');
+    
+    const addClass = (keys, cls) => keys.forEach(k => document.getElementById(`cell-${k}`).classList.add(cls));
+    const addCheck = (keys, counts) => {
+      keys.forEach((k, idx) => {
+        let cellEl = document.getElementById(`cell-${k}`);
+        let cSpan = document.createElement('span'); cSpan.className = 'check-mark'; cSpan.innerText = '✓'.repeat(counts[idx]);
+        cellEl.appendChild(cSpan);
+      });
+    };
+    const addOuterCheck = (keys) => {
+      keys.forEach(k => {
+        let cellEl = document.getElementById(`cell-${k}`);
+        let div = document.createElement('div'); div.className = 'outer-check'; div.innerText = '✓';
+        cellEl.appendChild(div);
+      });
+    };
+
+    if (type === 'view') {
+      addClass(['U'], 'view-purple'); 
+      if (val === 2) addClass(['A', 'A_prime'], 'view-green'); 
+      if (val === 3) addClass(['B', 'B_prime'], 'view-orange'); 
+      if (val === 4) addClass(['A_B', 'A_prime_B', 'A_B_prime', 'A_prime_B_prime'], 'view-blue'); 
+    } else if (type === 'flow') {
+      if (val === 1) addClass(['A_B'], 'flow-1');
+      if (val === 2) addClass(['A_B_prime', 'A_prime_B'], 'flow-2');
+      if (val === 3) addClass(['A_prime_B_prime'], 'flow-3');
+    } else if (type === 'union') {
+      if (val === 1) { addClass(['A_B', 'A_B_prime', 'A_prime_B'], 'highlight-yellow'); addOuterCheck(['A','B']); }
+      if (val === 2) { addClass(['A_B', 'A_B_prime', 'A_prime_B_prime'], 'highlight-yellow'); addOuterCheck(['A','B_prime']); }
+      if (val === 3) { addClass(['A_B', 'A_prime_B', 'A_prime_B_prime'], 'highlight-yellow'); addOuterCheck(['A_prime','B']); }
+      if (val === 4) { addClass(['A_B_prime', 'A_prime_B', 'A_prime_B_prime'], 'highlight-yellow'); addOuterCheck(['A_prime','B_prime']); }
+    }
+  };
+</script>
+</body>
+</html>
