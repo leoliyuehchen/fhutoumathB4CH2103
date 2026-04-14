@@ -110,7 +110,9 @@
       </div>
 
       <div id="observation-panel" class="hidden flex-col gap-2 mt-2 w-full items-center">
-        <div class="text-center font-bold text-orange-600 border-b border-orange-200 pb-2 mb-2 w-full max-w-[550px] text-lg">🔍 九宮格進階觀察</div>
+        <div class="text-center font-bold text-orange-600 border-b border-orange-200 pb-2 mb-2 w-full max-w-[550px] text-lg bg-orange-50 rounded-t p-2">
+          💡 九宮格解鎖！試著點擊下方按鈕，觀察圖形幫助答題！
+        </div>
         
         <div class="obs-group">
           <div class="obs-title text-purple-800">【四重視角】驗證總數 (點擊測試U的連動)</div>
@@ -159,10 +161,13 @@
       <div id="phase-2-container" class="hidden">
         <div class="step-section step-section-blue mb-6 shadow-lg mt-6">
           <div class="step-header step-header-blue text-xl">Step 2：回答問題</div>
+          <div class="bg-blue-50 text-blue-800 text-sm font-bold p-3 border-b border-blue-200 text-center">
+            💡 左側的「觀察面板」已開啟，點擊它可以幫助你找出答案喔！
+          </div>
           <div id="sub-questions-list"></div>
         </div>
         <div id="finish-msg" class="hidden bg-green-100 border-2 border-green-500 text-green-800 p-5 rounded-xl text-center font-bold text-xl mb-6 shadow-md">
-          🎉 恭喜！本題完全破解！<br><span class="text-base font-normal text-green-700 mt-2 inline-block">請到左方「觀察面板」，體驗視覺化解題邏輯。</span>
+          🎉 恭喜！本題完全破解！
         </div>
       </div>
     </div>
@@ -329,7 +334,6 @@
     let grid = { ...initialGrid };
     let path = [];
 
-    // 處理需要手動計算的前置步驟
     if (currentProblem.preSteps) {
         currentProblem.preSteps.forEach(ps => {
             path.push({ ...ps, isPreStep: true });
@@ -337,7 +341,6 @@
         });
     }
 
-    // 若有自訂順序 (如反推題)
     if (currentProblem.customPath) {
         currentProblem.customPath.forEach(step => {
             path.push(step);
@@ -346,7 +349,6 @@
         return { finalGrid: grid, path: path };
     }
 
-    // 自動加減法推理引擎
     let changed = true;
     while (changed && Object.keys(grid).length < 9) {
       changed = false;
@@ -391,7 +393,6 @@
     document.querySelectorAll('.label-B').forEach(el => el.innerText = currentProblem.labels.B + "(B)");
     document.querySelectorAll('.label-B-prime').forEach(el => el.innerText = currentProblem.labels.B_prime + "(B')");
 
-    // 清空表格
     const allKeys = ['U', 'A', 'A_prime', 'B', 'B_prime', 'A_B', 'A_prime_B', 'A_B_prime', 'A_prime_B_prime'];
     allKeys.forEach(k => {
       let v = document.getElementById(`val-${k}`);
@@ -405,7 +406,7 @@
     fullSolvePath = solved.path;
     currentGrid = solved.finalGrid; 
 
-    // === 0.8秒動畫填入初始條件 ===
+    // === 動畫展示 ===
     await sleep(400); 
     const knownKeys = Object.keys(currentProblem.knowns);
     for (let k of knownKeys) {
@@ -508,6 +509,12 @@
 
   function triggerPhase2() {
     document.getElementById('phase-1-container').classList.add('opacity-50', 'pointer-events-none');
+    
+    // === 提前觸發觀察面板 ===
+    let obsPanel = document.getElementById('observation-panel');
+    obsPanel.classList.remove('hidden');
+    obsPanel.classList.add('flex');
+
     let p2c = document.getElementById('phase-2-container');
     p2c.classList.remove('hidden');
     
@@ -533,6 +540,8 @@
       });
       let firstSq = document.querySelector('.sq-input');
       if(firstSq) { firstSq.focus(); firstSq.scrollIntoView({behavior:'smooth', block:'center'}); }
+      // 左側稍微捲動，讓觀察區露出來
+      document.getElementById('left-panel').scrollTo({ top: document.getElementById('left-panel').scrollHeight, behavior: 'smooth' });
     }, 100);
   }
 
@@ -552,9 +561,6 @@
         if(nextInp) nextInp.focus();
         else {
           document.getElementById('finish-msg').classList.remove('hidden');
-          document.getElementById('observation-panel').classList.remove('hidden');
-          document.getElementById('observation-panel').classList.add('flex');
-          document.getElementById('left-panel').scrollTo({ top: document.getElementById('left-panel').scrollHeight, behavior: 'smooth' });
         }
       }, 300);
     } else {
@@ -592,9 +598,6 @@
       <div class="math-overlay show" style="top:${topPlus}; left:${leftPlus};">+</div>`;
   }
 
-  // ==========================================
-  // 進階觀察區 (紫、綠、橘、藍 顏色連動)
-  // ==========================================
   function clearObs() {
     document.querySelectorAll('.cell').forEach(c => {
       c.className = c.className.replace(/view-purple|view-green|view-orange|view-blue|highlight-yellow/g, '').replace(/flow-\d/g, '');
