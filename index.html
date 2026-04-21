@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>九宮格集合法 - 終極動態邏輯版</title>
+  <title>九宮格集合法 - 投影專用大字版</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, svg: { fontCache: 'global' } };
@@ -11,18 +11,22 @@
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   <style>
     body { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); font-family: 'Noto Sans TC', sans-serif; height: 100dvh; margin: 0; display: flex; flex-direction: column; overflow: hidden; }
-    #app-container { display: flex; flex-direction: column; height: 100%; width: 100%; max-width: 1280px; margin: 0 auto; background: white; box-shadow: 0 10px 30px rgba(234, 88, 12, 0.1); }
-    @media (min-width: 768px) { #app-container { flex-direction: row; height: 95vh; margin-top: 2.5vh; border-radius: 20px; overflow: hidden; } }
+    #app-container { display: flex; flex-direction: column; height: 100%; width: 100%; max-width: 1600px; margin: 0 auto; background: white; box-shadow: 0 10px 30px rgba(234, 88, 12, 0.1); }
+    @media (min-width: 768px) { #app-container { flex-direction: row; height: 96vh; margin-top: 2vh; border-radius: 20px; overflow: hidden; } }
     
-    #left-panel { flex: 1.3; padding: 20px; background-color: #fffaf0; border-right: 2px solid #ffedd5; overflow-y: auto; overflow-x: hidden; position: relative; scroll-behavior: smooth;}
-    #right-panel { flex: 1; padding: 20px; padding-bottom: 100px; overflow-y: auto; background-color: #ffffff; scroll-behavior: smooth; }
+    /* 左側捲動區 */
+    #left-panel { flex: 1.3; padding: 25px; background-color: #fffaf0; border-right: 2px solid #ffedd5; overflow-y: auto; overflow-x: hidden; position: relative; scroll-behavior: smooth;}
+    #right-panel { flex: 1; padding: 25px; padding-bottom: 120px; overflow-y: auto; background-color: #ffffff; scroll-behavior: smooth; }
     @media (max-width: 767px) { #left-panel { flex: 0 0 auto; max-height: 55vh; position: sticky; top: 0; z-index: 50; box-shadow: 0 4px 6px rgba(0,0,0,0.05);} }
 
-    .grid-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; width: 100%; max-width: 550px; margin: 15px auto; background: #ea580c; border: 4px solid #ea580c; border-radius: 12px; overflow: hidden; position: relative;}
+    /* 📌 九宮格投影放大版 (Max-width 650px, 高度 140px) */
+    .grid-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; width: 100%; max-width: 650px; margin: 20px auto; background: #ea580c; border: 5px solid #ea580c; border-radius: 12px; overflow: hidden; position: relative;}
     
-    .cell { background: #fffaf0; height: 110px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding-top: 12px; padding-bottom: 6px; position: relative; transition: all 0.3s; }
-    .cell-header { font-size: 0.95rem; color: #9a3412; font-weight: bold; margin-bottom: 2px; text-align: center; line-height: 1.15;}
-    .cell-value { color: #1f2937; font-size: 2.5rem; font-weight: 900; z-index: 2; display: flex; align-items: center; justify-content: center; width: 100%; flex: 1; opacity: 0; transform: scale(0.5); transition: opacity 0.4s, transform 0.4s;}
+    .cell { background: #fffaf0; height: 140px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding-top: 14px; padding-bottom: 8px; position: relative; transition: all 0.3s; }
+    /* 格子標題放大 */
+    .cell-header { font-size: 1.25rem; color: #9a3412; font-weight: bold; margin-bottom: 2px; text-align: center; line-height: 1.2;}
+    /* 📌 格子數字極致放大 (4rem = 64px) */
+    .cell-value { color: #1f2937; font-size: 4rem; font-weight: 900; z-index: 2; display: flex; align-items: center; justify-content: center; width: 100%; flex: 1; opacity: 0; transform: scale(0.5); transition: opacity 0.4s, transform 0.4s;}
     .cell-value.revealed { opacity: 1; transform: scale(1); }
     
     .cell.total { background: #fed7aa; }
@@ -31,72 +35,78 @@
 
     @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
     .animate-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-    .focus-blink { animation: pulseBorder 1.5s infinite; z-index: 10; transform: scale(1.02); border-radius: 8px; box-shadow: inset 0 0 0 4px #f97316; }
-    @keyframes pulseBorder { 0%, 100% { box-shadow: inset 0 0 0 4px rgba(249, 115, 22, 0.4); } 50% { box-shadow: inset 0 0 0 6px rgba(249, 115, 22, 1); } }
-    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+    .focus-blink { animation: pulseBorder 1.5s infinite; z-index: 10; transform: scale(1.02); border-radius: 10px; box-shadow: inset 0 0 0 5px #f97316; }
+    @keyframes pulseBorder { 0%, 100% { box-shadow: inset 0 0 0 5px rgba(249, 115, 22, 0.4); } 50% { box-shadow: inset 0 0 0 8px rgba(249, 115, 22, 1); } }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
-    .math-overlay { position: absolute; background: #ea580c; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 20px; z-index: 20; transform: translate(-50%, -50%); box-shadow: 0 4px 6px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; pointer-events: none;}
+    /* 📌 數學符號提示 (+, =) 放大 */
+    .math-overlay { position: absolute; background: #ea580c; color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 28px; z-index: 20; transform: translate(-50%, -50%); box-shadow: 0 4px 8px rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.3s; pointer-events: none;}
     .math-overlay.show { opacity: 1; }
 
-    .step-section { border: 2px solid #fdba74; border-radius: 12px; margin-bottom: 24px; background: #fff; overflow: hidden; transition: opacity 0.3s;}
-    .step-header { background: #fff7ed; padding: 12px 16px; font-size: 1.1rem; font-weight: bold; color: #ea580c; border-bottom: 2px solid #fdba74; }
-    .step-header-blue { background: #eff6ff; color: #2563eb; border-bottom: 2px solid #93c5fd; }
-    .step-section-blue { border: 2px solid #93c5fd; }
+    /* 📌 表單區放大 */
+    .step-section { border: 3px solid #fdba74; border-radius: 12px; margin-bottom: 24px; background: #fff; overflow: hidden; transition: opacity 0.3s;}
+    .step-header { background: #fff7ed; padding: 14px 20px; font-size: 1.35rem; font-weight: bold; color: #ea580c; border-bottom: 3px solid #fdba74; }
+    .step-header-blue { background: #eff6ff; color: #2563eb; border-bottom: 3px solid #93c5fd; }
+    .step-section-blue { border: 3px solid #93c5fd; }
 
-    .input-row { display: flex; flex-direction: column; padding: 12px 16px; border-bottom: 1px solid #ffedd5; }
+    .input-row { display: flex; flex-direction: column; padding: 16px 20px; border-bottom: 2px solid #ffedd5; }
     .input-row:last-child { border-bottom: none; }
-    .input-flex { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .input-flex { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     
-    .calc-input { width: 80px; height: 44px; font-size: 20px; text-align: center; border: 2px solid #fed7aa; border-radius: 8px; outline: none; transition: all 0.2s; font-weight: bold; color: #ea580c; }
-    .calc-input:focus { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2); }
+    /* 📌 互動輸入框加大 */
+    .calc-input { width: 100px; height: 56px; font-size: 28px; text-align: center; border: 3px solid #fed7aa; border-radius: 10px; outline: none; transition: all 0.2s; font-weight: bold; color: #ea580c; }
+    .calc-input:focus { border-color: #ea580c; box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.25); }
     .calc-input.error { border-color: #ef4444; background: #fef2f2; animation: shake 0.4s; color: #dc2626; }
     .calc-input:disabled { background: #f0fdf4; border-color: #22c55e; color: #15803d; }
     
-    .btn-check { background: #f97316; color: white; border: none; padding: 0 16px; height: 44px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap;}
+    /* 📌 按鈕加大 */
+    .btn-check { background: #f97316; color: white; border: none; padding: 0 20px; height: 56px; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap;}
     .btn-check:hover { background: #ea580c; }
     .btn-check:disabled { background: #d1d5db; cursor: not-allowed; color: #9ca3af; }
 
-    .obs-group { border: 1px solid #fed7aa; border-radius: 8px; padding: 10px; margin-bottom: 10px; background: white; width: 100%; max-width: 550px;}
-    .obs-title { font-size: 0.9rem; color: #c2410c; font-weight: bold; margin-bottom: 6px; text-align: center; }
-    .obs-btn { font-size: 0.85rem; padding: 6px; border-radius: 6px; border: 1px solid #fdba74; background: #fffaf0; color: #9a3412; cursor: pointer; transition: all 0.2s; flex: 1; text-align: center; font-weight: bold;}
+    /* 📌 觀察按鈕區放大 */
+    .obs-group { border: 2px solid #fed7aa; border-radius: 10px; padding: 14px; margin-bottom: 14px; background: white; width: 100%; max-width: 650px;}
+    .obs-title { font-size: 1.15rem; color: #c2410c; font-weight: bold; margin-bottom: 8px; text-align: center; }
+    .obs-btn { font-size: 1.1rem; padding: 10px; border-radius: 8px; border: 2px solid #fdba74; background: #fffaf0; color: #9a3412; cursor: pointer; transition: all 0.2s; flex: 1; text-align: center; font-weight: bold;}
     .obs-btn:hover { background: #ffedd5; }
     .obs-btn.active { background: #ea580c; color: white; border-color: #c2410c; }
     
-    .view-purple { background-color: #e9d5ff !important; border: 4px solid #a855f7 !important; z-index: 5;} 
-    .view-green { background-color: #bbf7d0 !important; border: 4px solid #22c55e !important; z-index: 5;} 
-    .view-orange { background-color: #fed7aa !important; border: 4px solid #f97316 !important; z-index: 5;} 
-    .view-blue { background-color: #bfdbfe !important; border: 4px solid #3b82f6 !important; z-index: 5;} 
-    .highlight-yellow { background-color: #fde047 !important; border: 3px solid #eab308; z-index: 5;} 
+    .view-purple { background-color: #e9d5ff !important; border: 5px solid #a855f7 !important; z-index: 5;} 
+    .view-green { background-color: #bbf7d0 !important; border: 5px solid #22c55e !important; z-index: 5;} 
+    .view-orange { background-color: #fed7aa !important; border: 5px solid #f97316 !important; z-index: 5;} 
+    .view-blue { background-color: #bfdbfe !important; border: 5px solid #3b82f6 !important; z-index: 5;} 
+    .highlight-yellow { background-color: #fde047 !important; border: 4px solid #eab308; z-index: 5;} 
 
-    .flow-1 { background-color: #3b82f6 !important; color: white !important; border: 3px solid #1d4ed8 !important;} 
-    .flow-2 { background-color: #93c5fd !important; color: #1e3a8a !important; border: 3px solid #3b82f6 !important;} 
-    .flow-3 { background-color: #bae6fd !important; color: #1e3a8a !important; border: 3px dashed #3b82f6 !important;} 
+    .flow-1 { background-color: #3b82f6 !important; color: white !important; border: 4px solid #1d4ed8 !important;} 
+    .flow-2 { background-color: #93c5fd !important; color: #1e3a8a !important; border: 4px solid #3b82f6 !important;} 
+    .flow-3 { background-color: #bae6fd !important; color: #1e3a8a !important; border: 4px dashed #3b82f6 !important;} 
     
-    .check-mark { color: #ea580c; font-weight: 900; font-size: 2.2rem; text-shadow: 0 0 4px white; position: absolute; bottom: 0px; right: 8px; z-index: 20;}
-    .outer-check { color: #16a34a; font-weight: 900; font-size: 4rem; text-shadow: 0 0 8px white; position: absolute; opacity: 0.85; z-index: 15;}
+    /* 📌 勾勾與聯集標示放大 */
+    .check-mark { color: #ea580c; font-weight: 900; font-size: 2.8rem; text-shadow: 0 0 6px white; position: absolute; bottom: 0px; right: 10px; z-index: 20;}
+    .outer-check { color: #16a34a; font-weight: 900; font-size: 5rem; text-shadow: 0 0 10px white; position: absolute; opacity: 0.85; z-index: 15;}
   </style>
 </head>
 <body>
 
 <div id="app-container">
   <div id="left-panel">
-    <div class="flex flex-col items-center w-full mx-auto pb-[150px]">
+    <div class="flex flex-col items-center w-full mx-auto pb-[180px]">
       
-      <div class="w-full max-w-[550px] mb-3">
-        <select id="problem-select" class="w-full p-3 border-2 border-orange-300 rounded-lg text-orange-900 font-bold focus:outline-none text-lg bg-white shadow-sm">
+      <div class="w-full max-w-[650px] mb-4">
+        <select id="problem-select" class="w-full p-4 border-4 border-orange-300 rounded-xl text-orange-900 font-bold focus:outline-none text-xl bg-white shadow-sm">
           </select>
-        <button id="btn-reload" class="w-full mt-2 py-2 bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold rounded-lg border border-orange-300 transition shadow-sm text-sm">
+        <button id="btn-reload" class="w-full mt-3 py-3 bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold rounded-xl border-2 border-orange-300 transition shadow-sm text-lg">
           🔄 重新產生本題數字
         </button>
       </div>
       
-      <div class="w-full max-w-[550px] bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500 text-gray-800 mb-2 shadow-sm leading-relaxed">
-        <div id="problem-desc" class="text-base font-bold mb-2 pb-2 border-b border-orange-200"></div>
-        <div id="problem-subqs" class="text-sm text-gray-700 space-y-1 font-bold"></div>
+      <div class="w-full max-w-[650px] bg-orange-50 p-5 rounded-xl border-l-8 border-orange-500 text-gray-800 mb-2 shadow-sm leading-relaxed">
+        <div id="problem-desc" class="text-xl font-bold mb-3 pb-3 border-b-2 border-orange-200"></div>
+        <div id="problem-subqs" class="text-lg text-gray-700 space-y-2 font-bold"></div>
       </div>
 
       <div class="grid-container" id="nine-grid">
-        <div class="cell total" id="cell-U" data-row="0" data-col="0"><div class="cell-header">全集(總數)<br><span class="text-xs font-normal">定錨點</span></div><div class="cell-value" id="val-U"></div></div>
+        <div class="cell total" id="cell-U" data-row="0" data-col="0"><div class="cell-header">全集(總數)<br><span class="text-sm font-normal">定錨點</span></div><div class="cell-value" id="val-U"></div></div>
         <div class="cell outer" id="cell-A" data-row="0" data-col="1"><div class="cell-header label-A">A</div><div class="cell-value" id="val-A"></div><div id="check-A"></div></div>
         <div class="cell outer" id="cell-A_prime" data-row="0" data-col="2"><div class="cell-header label-A-prime">A'</div><div class="cell-value" id="val-A_prime"></div><div id="check-A_prime"></div></div>
         <div class="cell outer" id="cell-B" data-row="1" data-col="0"><div class="cell-header label-B">B</div><div class="cell-value" id="val-B"></div><div id="check-B"></div></div>
@@ -109,14 +119,14 @@
         <div id="math-overlay-container"></div>
       </div>
 
-      <div id="observation-panel" class="hidden flex-col gap-2 mt-2 w-full items-center">
-        <div class="text-center font-bold text-orange-600 border-b border-orange-200 pb-2 mb-2 w-full max-w-[550px] text-lg bg-orange-50 rounded-t p-2">
-          💡 九宮格解鎖！試著點擊下方按鈕，觀察圖形幫助答題！
+      <div id="observation-panel" class="hidden flex-col gap-3 mt-3 w-full items-center">
+        <div class="text-center font-bold text-orange-600 border-b-2 border-orange-200 pb-2 mb-2 w-full max-w-[650px] text-2xl bg-orange-50 rounded-t-lg p-3">
+          💡 九宮格解鎖！請點擊下方按鈕觀察幫助答題！
         </div>
         
         <div class="obs-group">
           <div class="obs-title text-purple-800">【四重視角】驗證總數 (點擊測試U的連動)</div>
-          <div class="flex gap-2">
+          <div class="flex gap-3">
             <button class="obs-btn hover:bg-purple-100 text-purple-800 border-purple-300" onclick="obs('view', 1)">1. 總計(紫)</button>
             <button class="obs-btn hover:bg-green-100 text-green-800 border-green-300" onclick="obs('view', 2)">2. A+A'(綠)</button>
             <button class="obs-btn hover:bg-orange-100 text-orange-800 border-orange-300" onclick="obs('view', 3)">3. B+B'(橘)</button>
@@ -126,7 +136,7 @@
 
         <div class="obs-group">
           <div class="obs-title text-blue-800">【視覺流向】條件符合數遞減</div>
-          <div class="flex gap-2">
+          <div class="flex gap-3">
             <button class="obs-btn hover:bg-blue-100" onclick="obs('flow', 1)">完全符合(2)</button>
             <button class="obs-btn hover:bg-blue-100" onclick="obs('flow', 2)">僅一符合(1)</button>
             <button class="obs-btn hover:bg-blue-100" onclick="obs('flow', 3)">完全不符合(0)</button>
@@ -135,38 +145,38 @@
 
         <div class="obs-group">
           <div class="obs-title text-green-800">【聯集區域】還原排容原理打勾</div>
-          <div class="flex gap-2">
+          <div class="flex gap-3">
             <button class="obs-btn hover:bg-green-100" onclick="obs('union', 1)">A∪B</button>
             <button class="obs-btn hover:bg-green-100" onclick="obs('union', 2)">A∪B'</button>
             <button class="obs-btn hover:bg-green-100" onclick="obs('union', 3)">A'∪B</button>
             <button class="obs-btn hover:bg-green-100" onclick="obs('union', 4)">A'∪B'</button>
           </div>
         </div>
-        <button class="mt-2 w-full max-w-[550px] py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-bold transition shadow-sm" onclick="clearObs()">清除所有觀察效果</button>
+        <button class="mt-3 w-full max-w-[650px] py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-lg font-bold transition shadow-sm border-2 border-gray-300" onclick="clearObs()">清除所有觀察效果</button>
       </div>
     </div> 
   </div>
 
   <div id="right-panel">
     <div id="interactive-content">
-      <div class="text-gray-700 mb-6 font-bold text-xl border-l-4 border-orange-500 pl-3">🎯 戰略：逐步解出九宮格，再回答問題！</div>
+      <div class="text-gray-700 mb-6 font-bold text-2xl border-l-8 border-orange-500 pl-4">🎯 戰略：逐步解出九宮格，再回答問題！</div>
       
-      <div id="loading-indicator" class="text-center py-10 text-orange-600 font-bold text-lg hidden">
-        <svg class="animate-spin h-8 w-8 text-orange-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+      <div id="loading-indicator" class="text-center py-10 text-orange-600 font-bold text-2xl hidden">
+        <svg class="animate-spin h-10 w-10 text-orange-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
         正在將已知條件慢慢放入表格中...
       </div>
 
       <div id="phase-1-container"></div>
 
       <div id="phase-2-container" class="hidden">
-        <div class="step-section step-section-blue mb-6 shadow-lg mt-6">
-          <div class="step-header step-header-blue text-xl">Step 2：回答問題</div>
-          <div class="bg-blue-50 text-blue-800 text-sm font-bold p-3 border-b border-blue-200 text-center">
+        <div class="step-section step-section-blue mb-8 shadow-xl mt-8">
+          <div class="step-header step-header-blue text-2xl">Step 2：回答問題</div>
+          <div class="bg-blue-50 text-blue-800 text-lg font-bold p-4 border-b-2 border-blue-200 text-center">
             💡 左側的「觀察面板」已開啟，點擊它可以幫助你找出答案喔！
           </div>
           <div id="sub-questions-list"></div>
         </div>
-        <div id="finish-msg" class="hidden bg-green-100 border-2 border-green-500 text-green-800 p-5 rounded-xl text-center font-bold text-xl mb-6 shadow-md">
+        <div id="finish-msg" class="hidden bg-green-100 border-4 border-green-500 text-green-800 p-6 rounded-2xl text-center font-bold text-3xl mb-8 shadow-lg">
           🎉 恭喜！本題完全破解！
         </div>
       </div>
@@ -194,7 +204,7 @@
         return {
           text: `有 ${n} 個人排成一直線。其中甲不排在首位，乙不排在末位，請問共有幾種排法？`,
           labels: { A: '甲排首', A_prime: '甲不排首', B: '乙排末', B_prime: '乙不排末' },
-          knowns: {}, // 完全空，讓學生自己算
+          knowns: {}, 
           preSteps: [
             { target: 'U', val: U, label: `全集(任意排)`, hint: `直線排列：$${n}! = ${U}$` },
             { target: 'A', val: A, label: `甲排首 (A)`, hint: `甲固定，其餘排列：$${n-1}! = ${A}$` },
@@ -219,7 +229,7 @@
         return {
           text: `從 1 到 ${N} 的自然數中，試求與 ${d1} 及 ${d2} 倍數相關的數量。`,
           labels: { A: `${d1}的倍數`, A_prime: `非${d1}倍數`, B: `${d2}的倍數`, B_prime: `非${d2}倍數` },
-          knowns: { U: N }, // 只給總數
+          knowns: { U: N }, 
           preSteps: [
             { target: 'A', val: A, label: `${d1}的倍數 (A)`, hint: `使用除法取商數：$${N} \\div ${d1} = ${A}...$` },
             { target: 'B', val: B, label: `${d2}的倍數 (B)`, hint: `使用除法取商數：$${N} \\div ${d2} = ${B}...$` },
@@ -262,7 +272,6 @@
           text: `某考試中，數學及格 ${A} 位，英文及格 ${B} 位，兩科都及格 ${A_B} 位，<span class="text-orange-700 font-bold">兩科都不及格 ${A_p_B_p} 位</span>。`,
           labels: { A: '數學及格', A_prime: '數學不及格', B: '英文及格', B_prime: '英文不及格' },
           knowns: { A, B, A_B, A_prime_B_prime: A_p_B_p },
-          // 精確指定反推題的解題順序：僅B -> 僅A -> A' -> B' -> 全集(U)
           customPath: [
             { target: 'A_prime_B', val: B - A_B, label: '僅英文及格(僅B)', eq: `${B} - ${A_B}`, r: RULES.find(r=>r.total==='B') },
             { target: 'A_B_prime', val: A - A_B, label: '僅數學及格(僅A)', eq: `${A} - ${A_B}`, r: RULES.find(r=>r.total==='A') },
@@ -276,13 +285,12 @@
     }
   ];
 
-  // 增加隨機綜合挑戰題 (動態呼叫前四種)
   PROBLEM_GENERATORS.push({
     id: 'random', source: '🎲 隨機洗牌挑戰題',
     generate: () => {
       const idx = [0, 1, 2, 3][rand(0, 3)];
       let prob = PROBLEM_GENERATORS[idx].generate();
-      prob.text = `<span class="text-purple-700 font-bold">【🎲 隨機抽籤挑戰】</span><br>` + prob.text;
+      prob.text = `<span class="text-purple-700 font-bold text-2xl">【🎲 隨機抽籤挑戰】</span><br>` + prob.text;
       return prob;
     }
   });
@@ -409,14 +417,18 @@
     // === 動畫展示 ===
     await sleep(400); 
     const knownKeys = Object.keys(currentProblem.knowns);
-    for (let k of knownKeys) {
-      if (currentAnimSeq !== seq) return; 
-      let valEl = document.getElementById(`val-${k}`);
-      valEl.innerText = currentProblem.knowns[k];
-      valEl.classList.add('revealed');
-      document.getElementById(`cell-${k}`).classList.add('animate-pop');
-      playPop();
-      await sleep(800); 
+    if (knownKeys.length > 0) {
+        for (let k of knownKeys) {
+          if (currentAnimSeq !== seq) return; 
+          let valEl = document.getElementById(`val-${k}`);
+          valEl.innerText = currentProblem.knowns[k];
+          valEl.classList.add('revealed');
+          document.getElementById(`cell-${k}`).classList.add('animate-pop');
+          playPop();
+          await sleep(800); 
+        }
+    } else {
+        await sleep(500); // 如果是全空的(排列題)，稍微等一下就開始
     }
 
     if (currentAnimSeq !== seq) return;
@@ -436,12 +448,12 @@
       contentHTML += `
         <div class="input-row" id="row-${step.target}">
           <div class="input-flex">
-            <div class="font-bold text-gray-800 flex-1">${title}</div>
+            <div class="font-bold text-gray-800 flex-1 text-2xl">${title}</div>
             <input type="number" id="in-${step.target}" class="calc-input p1-input" placeholder="?">
             <button id="btn-${step.target}" class="btn-check p1-btn" onclick="checkGridStep('${step.target}', ${step.val}, ${step.isPreStep ? 'true' : 'false'})">檢查</button>
-            <button onclick="toggleHint('hint-${step.target}', '${step.target}', ${step.isPreStep ? 'true' : 'false'})" class="text-blue-600 text-sm font-bold hover:underline w-16 text-right">小提示</button>
+            <button onclick="toggleHint('hint-${step.target}', '${step.target}', ${step.isPreStep ? 'true' : 'false'})" class="text-blue-600 text-lg font-bold hover:underline w-20 text-right">小提示</button>
           </div>
-          <div id="hint-${step.target}" class="hidden mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded border border-gray-200">
+          <div id="hint-${step.target}" class="hidden mt-3 text-xl text-gray-600 bg-gray-50 p-4 rounded-lg border-2 border-gray-200">
              ${hintText}
           </div>
         </div>`;
@@ -510,7 +522,6 @@
   function triggerPhase2() {
     document.getElementById('phase-1-container').classList.add('opacity-50', 'pointer-events-none');
     
-    // === 提前觸發觀察面板 ===
     let obsPanel = document.getElementById('observation-panel');
     obsPanel.classList.remove('hidden');
     obsPanel.classList.add('flex');
@@ -524,7 +535,7 @@
       listHTML += `
         <div class="input-row">
           <div class="input-flex">
-            <div class="font-bold text-blue-900 flex-1">${q.q}</div>
+            <div class="font-bold text-blue-900 flex-1 text-2xl">${q.q}</div>
             <input type="number" id="sq-in-${idx}" class="calc-input sq-input border-blue-300 text-blue-700 focus:border-blue-500" placeholder="?">
             <button id="sq-btn-${idx}" class="btn-check bg-blue-600 hover:bg-blue-700" onclick="checkSubQ(${idx}, ${ans})">檢查</button>
           </div>
@@ -540,7 +551,6 @@
       });
       let firstSq = document.querySelector('.sq-input');
       if(firstSq) { firstSq.focus(); firstSq.scrollIntoView({behavior:'smooth', block:'center'}); }
-      // 左側稍微捲動，讓觀察區露出來
       document.getElementById('left-panel').scrollTo({ top: document.getElementById('left-panel').scrollHeight, behavior: 'smooth' });
     }, 100);
   }
